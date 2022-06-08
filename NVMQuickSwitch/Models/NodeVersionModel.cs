@@ -16,12 +16,10 @@ namespace NVMQuickSwitch.Models
 
         internal static NodeVersionModel FromLine(string line)
         {
-            // Use a Regular Expression to derive the version number.
             var match = Regex.Match(line, @"^\s*(\*)?\s*(\d+\.\d+\.\d+)");
 
             if (!match.Success)
             {
-                // A version couldn't be found, so throw.
                 throw new Exception($"Failed to parse line: {line}");
             }
 
