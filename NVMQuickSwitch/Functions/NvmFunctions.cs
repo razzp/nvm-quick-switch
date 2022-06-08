@@ -1,4 +1,5 @@
 ﻿using NVMQuickSwitch.Models;
+using System.Diagnostics;
 
 namespace NVMQuickSwitch.Functions
 {
@@ -6,16 +7,38 @@ namespace NVMQuickSwitch.Functions
     {
         internal static IEnumerable<NodeVersionModel> GetNodeVersions()
         {
-            // Get the list of available Node versions.
-            var output = CmdFunctions.RunCommand("nvm list");
+            var output = RunCommand("nvm list");
 
             return output
-                // Split the ouput on carriage return and newline characters.
                 .Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                // Map each line to a `NodeVersionModel`.
                 .Select(line => NodeVersionModel.FromLine(line));
         }
 
-        internal static string SetNodeVersion(string version) => CmdFunctions.RunCommand($"nvm use {version}");
+        internal static string SetNodeVersion(string version)
+        {
+            return RunCommand($"nvm use {version}");
+        }
+
+        private static string RunCommand(string command)
+        {
+            var process = new Process()
+            {
+                StartInfo = new ProcessStartInfo("cmd", $"/c {command}")
+                {
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    CreateNoWindow = true,
+                },
+            };
+
+            process.Start();
+
+            var output = process.StandardOutput.ReadToEnd();
+
+            process.WaitForExit();
+            process.Close();
+
+            return output;
+        }
     }
 }
