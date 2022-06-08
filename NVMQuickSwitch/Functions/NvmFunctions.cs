@@ -23,7 +23,7 @@ namespace NVMQuickSwitch.Functions
         {
             var process = new Process()
             {
-                StartInfo = new ProcessStartInfo("cmd", $"/c {command}")
+                StartInfo = new ProcessStartInfo("powershell", command)
                 {
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
