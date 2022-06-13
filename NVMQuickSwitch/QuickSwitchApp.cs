@@ -78,6 +78,10 @@ namespace NVMQuickSwitch
 
             var output = NvmFunctions.SetNodeVersion((string)((ToolStripMenuItem)sender).Tag);
 
+            NvmFunctions.RefreshNodeVersions();
+
+            BuildMenu();
+
             trayIcon.ShowBalloonTip(3000, "Node version changed", output, ToolTipIcon.Info);
         }
 
