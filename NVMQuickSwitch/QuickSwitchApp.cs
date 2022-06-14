@@ -26,7 +26,7 @@ namespace NVMQuickSwitch
                 Visible = true,
             };
 
-            NvmFunctions.RefreshNodeVersions();
+            NodeFunctions.RefreshNodeVersions();
 
             BuildMenu();
         }
@@ -43,7 +43,7 @@ namespace NVMQuickSwitch
             contextMenu.Items.Add("View on GitHub", null, AppUrlButton_Clicked);
             contextMenu.Items.Add("-");
 
-            foreach (var nodeVersion in NvmFunctions.GetNodeVersions())
+            foreach (var nodeVersion in NodeFunctions.GetNodeVersions())
             {
                 var name = $"{nodeVersion.Version}{(nodeVersion.IsCurrent ? " (current)" : string.Empty)}";
                 var image = nodeVersion.IsCurrent ? iconSelected : iconUnSelected;
@@ -76,9 +76,9 @@ namespace NVMQuickSwitch
                 throw new Exception();
             }
 
-            var output = NvmFunctions.SetNodeVersion((string)((ToolStripMenuItem)sender).Tag);
+            var output = NodeFunctions.SetNodeVersion((string)((ToolStripMenuItem)sender).Tag);
 
-            NvmFunctions.RefreshNodeVersions();
+            NodeFunctions.RefreshNodeVersions();
 
             BuildMenu();
 
@@ -87,7 +87,7 @@ namespace NVMQuickSwitch
 
         private void Refresh(object? sender, EventArgs e)
         {
-            var versions = NvmFunctions.RefreshNodeVersions();
+            var versions = NodeFunctions.RefreshNodeVersions();
 
             BuildMenu();
 

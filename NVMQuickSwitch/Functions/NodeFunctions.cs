@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace NVMQuickSwitch.Functions
 {
-    internal static class NvmFunctions
+    internal static class NodeFunctions
     {
         private static IEnumerable<NodeVersionModel> _installedNodeVersions
             = Enumerable.Empty<NodeVersionModel>();
