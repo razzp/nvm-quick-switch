@@ -22,10 +22,8 @@ namespace NVMQuickSwitch.Functions
         internal static IEnumerable<NodeVersionModel> GetNodeVersions() =>
             _installedNodeVersions;
 
-        internal static string SetNodeVersion(string version)
-        {
-            return RunCommand($"nvm use {version}");
-        }
+        internal static string SetNodeVersion(string version) =>
+            RunCommand($"nvm use {version}");
 
         private static string RunCommand(string command)
         {
