@@ -26,11 +26,9 @@ namespace NVMQuickSwitch
                 Visible = true,
             };
 
-            contextMenu.Opening += ContextMenuStrip_Opening;
+            NvmFunctions.RefreshNodeVersions();
 
-            // It seems that without adding at least one item during initialisation
-            // the context menu is disabled in some capacity and will never show.
-            contextMenu.Items.Add(string.Empty);
+            BuildMenu();
         }
 
         private void BuildMenu()
@@ -57,6 +55,9 @@ namespace NVMQuickSwitch
             }
 
             contextMenu.Items.Add("-");
+            contextMenu.Items.Add("Refresh installed versions", null, Refresh);
+
+            contextMenu.Items.Add("-");
             contextMenu.Items.Add("Exit", null, Exit);
         }
 
@@ -68,11 +69,6 @@ namespace NVMQuickSwitch
             });
         }
 
-        private void ContextMenuStrip_Opening(object? sender, EventArgs e)
-        {
-            BuildMenu();
-        }
-
         private void VersionButton_Clicked(object? sender, EventArgs e)
         {
             if (sender is null || sender is not ToolStripMenuItem)
@@ -82,7 +78,20 @@ namespace NVMQuickSwitch
 
             var output = NvmFunctions.SetNodeVersion((string)((ToolStripMenuItem)sender).Tag);
 
+            NvmFunctions.RefreshNodeVersions();
+
+            BuildMenu();
+
             trayIcon.ShowBalloonTip(3000, "Node version changed", output, ToolTipIcon.Info);
+        }
+
+        private void Refresh(object? sender, EventArgs e)
+        {
+            var versions = NvmFunctions.RefreshNodeVersions();
+
+            BuildMenu();
+
+            trayIcon.ShowBalloonTip(3000, "Node versions refreshed", $"Found versions {string.Join(", ", versions.Select(v => v.Version))}", ToolTipIcon.Info);
         }
 
         private void Exit(object? sender, EventArgs e)

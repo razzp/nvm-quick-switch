@@ -3,16 +3,24 @@ using System.Diagnostics;
 
 namespace NVMQuickSwitch.Functions
 {
-    internal class NvmFunctions
+    internal static class NvmFunctions
     {
-        internal static IEnumerable<NodeVersionModel> GetNodeVersions()
+        private static IEnumerable<NodeVersionModel> _installedNodeVersions
+            = Enumerable.Empty<NodeVersionModel>();
+
+        internal static IEnumerable<NodeVersionModel> RefreshNodeVersions()
         {
             var output = RunCommand("nvm list");
 
-            return output
+            _installedNodeVersions = output
                 .Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
                 .Select(line => NodeVersionModel.FromLine(line));
+
+            return _installedNodeVersions;
         }
+
+        internal static IEnumerable<NodeVersionModel> GetNodeVersions() =>
+            _installedNodeVersions;
 
         internal static string SetNodeVersion(string version)
         {
