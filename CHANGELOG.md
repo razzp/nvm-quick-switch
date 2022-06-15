@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0 (2022-06-15)
+
+### Changed
+
+- Tray icon now opens on left-click as well as the default right-click.
+
 ## 1.1.0 (2022-06-14)
 
 ### Changed
