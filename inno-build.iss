@@ -1,5 +1,5 @@
 #define MyAppName "NVM Quick Switch"
-#define MyAppVersion "1.1.0"
+#define MyAppVersion "1.2.0"
 #define MyAppPublisher "razzp"
 #define MyAppURL "https://github.com/razzp/nvm-quick-switch"
 #define MyAppExeName "NVMQuickSwitch.exe"
