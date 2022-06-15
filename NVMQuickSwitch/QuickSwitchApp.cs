@@ -1,5 +1,6 @@
 ﻿using NVMQuickSwitch.Functions;
 using System.Diagnostics;
+using System.Reflection;
 
 namespace NVMQuickSwitch
 {
@@ -25,6 +26,25 @@ namespace NVMQuickSwitch
                 ContextMenuStrip = contextMenu,
                 Visible = true,
             };
+
+            /*
+            Because of the way the tray icon is designed, it's a nightmare
+            to write a left-click event which actually does the same thing
+            as the default right-click event (positioning, auto-close etc).
+
+            So we have to get the default ShowContextMenu method using
+            reflection (because for some reason it's marked internal),
+            and then call that in the left-click event bound to the icon.
+
+            Note we only get the method once and then close over the method
+            reference in the event handler, so we're not doing slow dynamic
+            reflection on every click.
+            */
+
+            var showContextMenu = typeof(NotifyIcon)
+                .GetMethod("ShowContextMenu", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            trayIcon.Click += (sender, e) => showContextMenu?.Invoke(trayIcon, null);
 
             NodeFunctions.RefreshNodeVersions();
 
