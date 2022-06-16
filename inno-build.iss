@@ -25,6 +25,10 @@ Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
 
+[Components]
+Name: "main"; Description: "Main application"; Types: full compact custom; Flags: fixed  
+Name: "registry"; Description: "Run on startup"; Types: full custom;
+
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
@@ -37,8 +41,7 @@ Source: "{#PublishPath}\NVMQuickSwitch.pdb"; DestDir: "{app}"; Flags: ignorevers
 Source: "{#PublishPath}\NVMQuickSwitch.runtimeconfig.json"; DestDir: "{app}"; Flags: ignoreversion
 
 [Registry]
-; Root: HKCU; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#MyAppName}"; ValueData: """{app}\{#MyAppExeName}"""; Flags: uninsdeletevalue
-Root: HKLM; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#MyAppName}"; ValueData: """{app}\{#MyAppExeName}"""; Flags: uninsdeletevalue
+Root: HKLM; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#MyAppName}"; ValueData: """{app}\{#MyAppExeName}"""; Flags: uninsdeletevalue; Components: registry
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall shellexec skipifsilent
