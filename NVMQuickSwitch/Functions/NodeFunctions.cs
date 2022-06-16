@@ -29,7 +29,7 @@ namespace NVMQuickSwitch.Functions
         {
             var process = new Process()
             {
-                StartInfo = new ProcessStartInfo("powershell", command)
+                StartInfo = new ProcessStartInfo("powershell", $"-NoProfile {command}")
                 {
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
