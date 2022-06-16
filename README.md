@@ -19,6 +19,7 @@ View [releases](https://github.com/razzp/nvm-quick-switch/releases) for download
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Versions are specified in the following files:
 
 - `\inno-build.iss`
+- `\make-zip.ps1`
 - `\NVMQuickSwitch\QuickSwitchApp.cs`
 
 ### Releasing
