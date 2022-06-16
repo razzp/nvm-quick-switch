@@ -1,4 +1,4 @@
-$app_version = "1.2.0"
+$app_version = "1.3.0"
 $root = [string](Get-Location)
 $publish_dir = $root + "\NVMQuickSwitch\bin\Release\net6.0-windows\publish"
 $output_dir = $root + "\release"

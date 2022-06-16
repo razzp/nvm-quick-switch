@@ -7,7 +7,7 @@ namespace NVMQuickSwitch
     internal class QuickSwitchApp : ApplicationContext
     {
         private const string AppName = "NVM Quick Switch";
-        private const string AppVersion = "1.2.0";
+        private const string AppVersion = "1.3.0";
         private const string AppURL = "https://github.com/razzp/nvm-quick-switch";
 
         private readonly Image iconSelected = Image.FromFile("Resources/icon-selected.ico");

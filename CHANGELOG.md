@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.3.0 (2022-06-16)
+
+### Fixed
+
+- Powershell no longer loads a user profile when running commands.
+
+### Changed
+
+- Setup now includes option to run application on startup.
+- Active node version now displays architecture.
+
 ## 1.2.0 (2022-06-15)
 
 ### Changed
