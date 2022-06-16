@@ -65,7 +65,7 @@ namespace NVMQuickSwitch
 
             foreach (var nodeVersion in NodeFunctions.GetNodeVersions())
             {
-                var name = $"{nodeVersion.Version}{(nodeVersion.IsCurrent ? " (current)" : string.Empty)}";
+                var name = nodeVersion.GetDisplayName();
                 var image = nodeVersion.IsCurrent ? iconSelected : iconUnSelected;
 
                 contextMenu.Items.Add(new ToolStripMenuItem(name, image, VersionButton_Clicked)
