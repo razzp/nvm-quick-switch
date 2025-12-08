@@ -10,9 +10,9 @@
         {
             try
             {
-                var timeout = TimeSpan.FromSeconds(10);
-                var url = Constants.LatestVersionUrl;
-                var latestVersion = await _httpClient.GetStringAsync(url);
+                var timeout = TimeSpan.FromMilliseconds(Constants.UpdateCheckTimeout);
+                using var cts = new CancellationTokenSource(timeout);
+                var latestVersion = await _httpClient.GetStringAsync(Constants.LatestVersionUrl, cts.Token);
 
                 _remoteVersion = new Version(latestVersion.Trim());
             }

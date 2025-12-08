@@ -10,5 +10,6 @@
         public const int NotificationDuration = 3000;
         public const int RefreshInterval = 5000;
         public const int UpdateCheckInterval = 1000 * 60 * 60; // 1 hour
+        public const int UpdateCheckTimeout = 5000;
     }
 }
