@@ -1,4 +1,5 @@
 ﻿using NVMQuickSwitch.Models;
+using NVMQuickSwitch.Services;
 
 namespace NVMQuickSwitch.Helpers
 {
@@ -8,7 +9,7 @@ namespace NVMQuickSwitch.Helpers
 
         public static async Task<UpdateInformationModel> UpdateAsync()
         {
-            var output = await CommandHelpers.RunAsync("nvm list");
+            var output = await PowerShellRunner.RunAsync("nvm list");
 
             var latestNodeVersions = output
                 .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
@@ -34,7 +35,7 @@ namespace NVMQuickSwitch.Helpers
         }
 
         public static async Task<string> SetNodeVersionAsync(string version) =>
-            await CommandHelpers.RunAsync($"nvm use {version}");
+            await PowerShellRunner.RunAsync($"nvm use {version}");
 
         public static IEnumerable<NodeVersionModel> GetAvailableNodeVersions() =>
             _availableNodeVersions;
