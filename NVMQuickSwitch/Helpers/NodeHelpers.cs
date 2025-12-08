@@ -13,7 +13,7 @@ namespace NVMQuickSwitch.Helpers
 
             var latestNodeVersions = output
                 .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
-                .Select(line => NodeVersionModel.FromLine(line));
+                .Select(NodeVersionModel.FromLine);
 
             var cachedNodeVersionsHash = new HashSet<string>(_availableNodeVersions.Select(b => b.Version));
             var latestNodeVersionsHash = new HashSet<string>(latestNodeVersions.Select(b => b.Version));

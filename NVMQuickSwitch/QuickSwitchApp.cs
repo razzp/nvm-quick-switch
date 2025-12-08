@@ -82,7 +82,7 @@ namespace NVMQuickSwitch
                         trayIcon.ShowBalloonTip(
                             Constants.NotificationDuration,
                             "NVM was updated",
-                            string.Join("\n", summary),
+                            string.Join(Environment.NewLine, summary),
                             ToolTipIcon.Info
                         );
                     }
