@@ -1,0 +1,36 @@
+﻿using NVMQuickSwitch.Models;
+
+namespace NVMQuickSwitch.Helpers
+{
+    public static class NodeHelpers
+    {
+        private static IEnumerable<NodeVersionModel> _availableNodeVersions = [];
+
+        public static async Task<UpdateInformationModel> UpdateAsync()
+        {
+            var output = await CommandHelpers.RunAsync("nvm list");
+
+            var latestNodeVersions = output
+                .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+                .Select(line => NodeVersionModel.FromLine(line));
+
+            var cachedNodeVersionsHash = new HashSet<string>(_availableNodeVersions.Select(b => b.Version));
+            var latestNodeVersionsHash = new HashSet<string>(latestNodeVersions.Select(b => b.Version));
+
+            var added = latestNodeVersions.Where(nv => !cachedNodeVersionsHash.Contains(nv.Version)).ToList();
+            var removed = _availableNodeVersions.Where(nv => !latestNodeVersionsHash.Contains(nv.Version)).ToList();
+
+            var hasChanged = _availableNodeVersions.FirstOrDefault(nv => nv.IsActive)?.Version != latestNodeVersions.FirstOrDefault(nv => nv.IsActive)?.Version;
+
+            _availableNodeVersions = latestNodeVersions;
+
+            return new UpdateInformationModel(latestNodeVersions, added, removed, hasChanged);
+        }
+
+        public static async Task<string> SetNodeVersionAsync(string version) =>
+            await CommandHelpers.RunAsync($"nvm use {version}");
+
+        public static IEnumerable<NodeVersionModel> GetAvailableNodeVersions() =>
+            _availableNodeVersions;
+    }
+}
