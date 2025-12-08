@@ -19,12 +19,12 @@
         {
             var summary = new List<string>();
 
-            if (AddedNodeVersions.Any())
+            if (AddedNodeVersions.Count != 0)
             {
                 summary.Add($"Added: {string.Join(", ", AddedNodeVersions.Select(x => x.Version))}");
             }
 
-            if (RemovedNodeVersions.Any())
+            if (RemovedNodeVersions.Count != 0)
             {
                 summary.Add($"Removed: {string.Join(", ", RemovedNodeVersions.Select(x => x.Version))}");
             }
