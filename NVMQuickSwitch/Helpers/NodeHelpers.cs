@@ -20,11 +20,17 @@ namespace NVMQuickSwitch.Helpers
             var added = latestNodeVersions.Where(nv => !cachedNodeVersionsHash.Contains(nv.Version)).ToList();
             var removed = _availableNodeVersions.Where(nv => !latestNodeVersionsHash.Contains(nv.Version)).ToList();
 
-            var hasChanged = _availableNodeVersions.FirstOrDefault(nv => nv.IsActive)?.Version != latestNodeVersions.FirstOrDefault(nv => nv.IsActive)?.Version;
+            var activeNow = _availableNodeVersions.FirstOrDefault(nv => nv.IsActive)?.Version;
+            var activeNext = latestNodeVersions.FirstOrDefault(nv => nv.IsActive)?.Version;
 
             _availableNodeVersions = latestNodeVersions;
 
-            return new UpdateInformationModel(latestNodeVersions, added, removed, hasChanged);
+            return new UpdateInformationModel(
+                availableNodeVersions: latestNodeVersions,
+                addedNodeVersions: added,
+                removedNodeVersions: removed,
+                activeVersionHasChanged: activeNow != activeNext
+            );
         }
 
         public static async Task<string> SetNodeVersionAsync(string version) =>
