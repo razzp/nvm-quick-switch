@@ -7,8 +7,8 @@
         public const string LatestReleaseUrl = "https://github.com/razzp/nvm-quick-switch/releases/latest";
         public const string LatestVersionUrl = "https://raw.githubusercontent.com/razzp/nvm-quick-switch/main/NVMQuickSwitch/VERSION";
 
+        public const int NotificationDuration = 3000;
         public const int RefreshInterval = 5000;
         public const int UpdateCheckInterval = 1000 * 60 * 60; // 1 hour
-        public const int NotificationDuration = 3000;
     }
 }
