@@ -1,4 +1,5 @@
 ﻿using NVMQuickSwitch.Helpers;
+using NVMQuickSwitch.Models;
 using System.Diagnostics;
 using System.Reflection;
 
@@ -6,36 +7,37 @@ namespace NVMQuickSwitch
 {
     internal class QuickSwitchApp : ApplicationContext
     {
-        private readonly System.Windows.Forms.Timer refreshTimer = new()
+        private readonly System.Windows.Forms.Timer _refreshTimer = new()
         {
             Interval = Constants.RefreshInterval,
         };
 
-        private readonly System.Windows.Forms.Timer updateTimer = new()
+        private readonly System.Windows.Forms.Timer _updateTimer = new()
         {
             Interval = Constants.UpdateCheckInterval,
         };
 
-        private readonly Icon iconApp = new("Resources/icon_app.ico");
-        private readonly Icon iconAppAlert = new("Resources/icon_app-alert.ico");
+        private readonly Icon _iconApp = new("Resources/icon_app.ico");
+        private readonly Icon _iconAppAlert = new("Resources/icon_app-alert.ico");
 
-        private readonly Image iconAlert = Image.FromFile("Resources/icon_alert.ico");
-        private readonly Image iconExit = Image.FromFile("Resources/icon_exit.ico");
-        private readonly Image iconGitHub = Image.FromFile("Resources/icon_github.ico");
-        private readonly Image iconRefresh = Image.FromFile("Resources/icon_refresh.ico");
-        private readonly Image iconSelected = Image.FromFile("Resources/icon_selected.ico");
+        private readonly Image _iconAdd = Image.FromFile("Resources/icon_add.ico");
+        private readonly Image _iconAlert = Image.FromFile("Resources/icon_alert.ico");
+        private readonly Image _iconExit = Image.FromFile("Resources/icon_exit.ico");
+        private readonly Image _iconGitHub = Image.FromFile("Resources/icon_github.ico");
+        private readonly Image _iconRefresh = Image.FromFile("Resources/icon_refresh.ico");
+        private readonly Image _iconSelected = Image.FromFile("Resources/icon_selected.ico");
 
-        private readonly ContextMenuStrip contextMenu = new();
+        private readonly ContextMenuStrip _contextMenu = new();
 
-        private readonly NotifyIcon trayIcon;
+        private readonly NotifyIcon _trayIcon;
 
         internal QuickSwitchApp()
         {
-            trayIcon = new NotifyIcon
+            _trayIcon = new NotifyIcon
             {
                 Text = Constants.AppName,
-                Icon = iconApp,
-                ContextMenuStrip = contextMenu,
+                Icon = _iconApp,
+                ContextMenuStrip = _contextMenu,
                 Visible = true,
             };
 
@@ -56,7 +58,24 @@ namespace NVMQuickSwitch
             var showContextMenu = typeof(NotifyIcon)
                 .GetMethod("ShowContextMenu", BindingFlags.Instance | BindingFlags.NonPublic);
 
-            trayIcon.Click += (sender, e) => showContextMenu?.Invoke(trayIcon, null);
+            _trayIcon.Click += (sender, e) => showContextMenu?.Invoke(_trayIcon, null);
+
+            _refreshTimer.Tick += async (sender, e) => await Update();
+
+            _updateTimer.Tick += async (sender, e) =>
+            {
+                _updateTimer.Stop();
+
+                try
+                {
+                    await VersionHelpers.UpdateAsync();
+                    BuildMenu();
+                }
+                finally
+                {
+                    _updateTimer.Start();
+                }
+            };
 
             Init();
         }
@@ -66,57 +85,15 @@ namespace NVMQuickSwitch
             await NodeHelpers.UpdateAsync();
             BuildMenu();
 
-            refreshTimer.Tick += async (sender, e) =>
-            {
-                refreshTimer.Stop();
-
-                try
-                {
-                    var update = await NodeHelpers.UpdateAsync();
-                    var summary = update.GetSummary();
-
-                    if (summary.Count != 0)
-                    {
-                        BuildMenu();
-
-                        trayIcon.ShowBalloonTip(
-                            Constants.NotificationDuration,
-                            "NVM was updated",
-                            string.Join(Environment.NewLine, summary),
-                            ToolTipIcon.Info
-                        );
-                    }
-                }
-                finally
-                {
-                    refreshTimer.Start();
-                }
-            };
-
-            updateTimer.Tick += async (sender, e) =>
-            {
-                updateTimer.Stop();
-
-                try
-                {
-                    await VersionHelpers.UpdateAsync();
-                    BuildMenu();
-                }
-                finally
-                {
-                    updateTimer.Start();
-                }
-            };
-
-            refreshTimer.Start();
-            updateTimer.Start();
+            _refreshTimer.Start();
+            _updateTimer.Start();
         }
 
         private void BuildMenu()
         {
-            contextMenu.Items.Clear();
+            _contextMenu.Items.Clear();
 
-            contextMenu.Items.Add(new ToolStripLabel($"{Constants.AppName} ({VersionHelpers.GetLocalVersion()})")
+            _contextMenu.Items.Add(new ToolStripLabel($"{Constants.AppName} ({VersionHelpers.GetLocalVersion()})")
             {
                 Enabled = false,
             });
@@ -125,57 +102,90 @@ namespace NVMQuickSwitch
 
             if (!string.IsNullOrWhiteSpace(updateVersion))
             {
-                contextMenu.Items.Add(
+                _contextMenu.Items.Add(
                     $"New version available ({updateVersion})",
-                    iconAlert,
+                    _iconAlert,
                     (sender, e) => OpenUrl(Constants.LatestReleaseUrl)
                 );
 
-                trayIcon.Icon = iconAppAlert;
+                _trayIcon.Icon = _iconAppAlert;
             }
             else
             {
-                trayIcon.Icon = iconApp;
+                _trayIcon.Icon = _iconApp;
             }
 
-            contextMenu.Items.Add("View on GitHub", iconGitHub, (sender, e) => OpenUrl(Constants.AppUrl));
-            contextMenu.Items.Add("-");
+            _contextMenu.Items.Add("View on GitHub", _iconGitHub, (sender, e) => OpenUrl(Constants.AppUrl));
+            _contextMenu.Items.Add("-");
 
             foreach (var nodeVersion in NodeHelpers.GetAvailableNodeVersions())
             {
-                var image = nodeVersion.IsActive ? iconSelected : null;
+                var image = nodeVersion.IsActive ? _iconSelected : null;
 
-                contextMenu.Items.Add(new ToolStripMenuItem(nodeVersion.DisplayName, image, VersionButton_Clicked)
-                {
-                    Tag = nodeVersion.Version,
-                });
+                _contextMenu.Items.Add(nodeVersion.DisplayName, image, async (sender, e) => await OnNodeVersionSelected(nodeVersion));
             }
 
-            contextMenu.Items.Add("-");
-            contextMenu.Items.Add("Refresh", iconRefresh, Refresh);
+            _contextMenu.Items.Add("-");
 
-            contextMenu.Items.Add("-");
-            contextMenu.Items.Add("Exit", iconExit, Exit);
+            _contextMenu.Items.Add("Install", _iconAdd, async (sender, e) =>
+            {
+                _refreshTimer.Stop();
+
+                try
+                {
+                    var command = @"
+                        $version = Read-Host 'Enter version to install'
+                        & nvm install $version
+                        pause
+                    ";
+
+                    using var process = Process.Start(new ProcessStartInfo
+                    {
+                        FileName = "powershell.exe",
+                        Arguments = $"-Command \"{command}\"",
+                        UseShellExecute = true,
+                        Verb = "runas"
+                    });
+
+                    if (process != null)
+                    {
+                        await process.WaitForExitAsync();
+
+                        if (process.ExitCode == 0)
+                        {
+                            await Update();
+                        }
+                    }
+                    else
+                    {
+                        MessageBox.Show("Could not start PowerShell.");
+                    }
+                }
+                finally
+                {
+                    _refreshTimer.Start();
+                }
+            });
+
+            _contextMenu.Items.Add("-");
+            _contextMenu.Items.Add("Refresh", _iconRefresh, async (sender, e) => await Refresh());
+            _contextMenu.Items.Add("-");
+            _contextMenu.Items.Add("Exit", _iconExit, (sender, e) => Exit());
         }
 
-        private async void VersionButton_Clicked(object? sender, EventArgs e)
+        private async Task OnNodeVersionSelected(NodeVersionModel version)
         {
-            if (sender is not ToolStripMenuItem menuItem || menuItem.Tag is not string version)
-            {
-                throw new Exception();
-            }
-
-            refreshTimer.Stop();
+            _refreshTimer.Stop();
 
             try
             {
-                var output = await NodeHelpers.SetNodeVersionAsync(version);
+                var output = await NodeHelpers.SetNodeVersionAsync(version.Version);
 
                 await NodeHelpers.UpdateAsync();
 
                 BuildMenu();
 
-                trayIcon.ShowBalloonTip(
+                _trayIcon.ShowBalloonTip(
                     Constants.NotificationDuration,
                     "Node version changed",
                     output,
@@ -184,13 +194,13 @@ namespace NVMQuickSwitch
             }
             finally
             {
-                refreshTimer.Start();
+                _refreshTimer.Start();
             }
         }
 
-        private async void Refresh(object? sender, EventArgs e)
+        private async Task Refresh()
         {
-            refreshTimer.Stop();
+            _refreshTimer.Stop();
 
             try
             {
@@ -199,7 +209,7 @@ namespace NVMQuickSwitch
 
                 BuildMenu();
 
-                trayIcon.ShowBalloonTip(
+                _trayIcon.ShowBalloonTip(
                     Constants.NotificationDuration,
                     "Refreshed successfully",
                     $"Active node version is {activeNodeVersion?.Version ?? "none"}",
@@ -208,14 +218,41 @@ namespace NVMQuickSwitch
             }
             finally
             {
-                refreshTimer.Start();
+                _refreshTimer.Start();
             }
         }
 
-        private void Exit(object? sender, EventArgs e)
+        private async Task Update()
         {
-            trayIcon.Visible = false;
-            trayIcon.Dispose();
+            _refreshTimer.Stop();
+
+            try
+            {
+                var update = await NodeHelpers.UpdateAsync();
+                var summary = update.GetSummary();
+
+                if (summary.Count != 0)
+                {
+                    BuildMenu();
+
+                    _trayIcon.ShowBalloonTip(
+                        Constants.NotificationDuration,
+                        "NVM was updated",
+                        string.Join(Environment.NewLine, summary),
+                        ToolTipIcon.Info
+                    );
+                }
+            }
+            finally
+            {
+                _refreshTimer.Start();
+            }
+        }
+
+        private void Exit()
+        {
+            _trayIcon.Visible = false;
+            _trayIcon.Dispose();
 
             Application.Exit();
         }
