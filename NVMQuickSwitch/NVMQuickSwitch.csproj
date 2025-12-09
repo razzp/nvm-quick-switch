@@ -35,9 +35,6 @@
     <None Update="Resources\icon_refresh.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="Resources\icon_remove.ico">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
     <None Update="Resources\icon_selected.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
