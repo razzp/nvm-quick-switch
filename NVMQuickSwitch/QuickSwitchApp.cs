@@ -1,4 +1,5 @@
-﻿using NVMQuickSwitch.Functions;
+﻿using NVMQuickSwitch.Helpers;
+using NVMQuickSwitch.Models;
 using System.Diagnostics;
 using System.Reflection;
 
@@ -6,24 +7,37 @@ namespace NVMQuickSwitch
 {
     internal class QuickSwitchApp : ApplicationContext
     {
-        private const string AppName = "NVM Quick Switch";
-        private const string AppVersion = "1.3.0";
-        private const string AppURL = "https://github.com/razzp/nvm-quick-switch";
+        private readonly System.Windows.Forms.Timer _refreshTimer = new()
+        {
+            Interval = Constants.RefreshInterval,
+        };
 
-        private readonly Image iconSelected = Image.FromFile("Resources/icon-selected.ico");
-        private readonly Image iconUnSelected = Image.FromFile("Resources/icon-unselected.ico");
+        private readonly System.Windows.Forms.Timer _updateTimer = new()
+        {
+            Interval = Constants.UpdateCheckInterval,
+        };
 
-        private readonly ContextMenuStrip contextMenu = new();
+        private readonly Icon _iconApp = new("Resources/icon_app.ico");
+        private readonly Icon _iconAppAlert = new("Resources/icon_app-alert.ico");
 
-        private readonly NotifyIcon trayIcon;
+        private readonly Image _iconAdd = Image.FromFile("Resources/icon_add.ico");
+        private readonly Image _iconAlert = Image.FromFile("Resources/icon_alert.ico");
+        private readonly Image _iconExit = Image.FromFile("Resources/icon_exit.ico");
+        private readonly Image _iconGitHub = Image.FromFile("Resources/icon_github.ico");
+        private readonly Image _iconRefresh = Image.FromFile("Resources/icon_refresh.ico");
+        private readonly Image _iconSelected = Image.FromFile("Resources/icon_selected.ico");
+
+        private readonly ContextMenuStrip _contextMenu = new();
+
+        private readonly NotifyIcon _trayIcon;
 
         internal QuickSwitchApp()
         {
-            trayIcon = new NotifyIcon
+            _trayIcon = new NotifyIcon
             {
-                Text = AppName,
-                Icon = new Icon("Resources/icon-app.ico"),
-                ContextMenuStrip = contextMenu,
+                Text = Constants.AppName,
+                Icon = _iconApp,
+                ContextMenuStrip = _contextMenu,
                 Visible = true,
             };
 
@@ -44,82 +58,211 @@ namespace NVMQuickSwitch
             var showContextMenu = typeof(NotifyIcon)
                 .GetMethod("ShowContextMenu", BindingFlags.Instance | BindingFlags.NonPublic);
 
-            trayIcon.Click += (sender, e) => showContextMenu?.Invoke(trayIcon, null);
+            _trayIcon.Click += (sender, e) => showContextMenu?.Invoke(_trayIcon, null);
 
-            NodeFunctions.RefreshNodeVersions();
+            _refreshTimer.Tick += async (sender, e) => await Update();
 
+            _updateTimer.Tick += async (sender, e) =>
+            {
+                _updateTimer.Stop();
+
+                try
+                {
+                    await VersionHelpers.UpdateAsync();
+                    BuildMenu();
+                }
+                finally
+                {
+                    _updateTimer.Start();
+                }
+            };
+
+            Init();
+        }
+
+        private async void Init()
+        {
+            await NodeHelpers.UpdateAsync();
             BuildMenu();
+
+            _refreshTimer.Start();
+            _updateTimer.Start();
         }
 
         private void BuildMenu()
         {
-            contextMenu.Items.Clear();
+            _contextMenu.Items.Clear();
 
-            contextMenu.Items.Add(new ToolStripLabel($"{AppName} ({AppVersion})")
+            _contextMenu.Items.Add(new ToolStripLabel($"{Constants.AppName} ({VersionHelpers.GetLocalVersion()})")
             {
                 Enabled = false,
             });
 
-            contextMenu.Items.Add("View on GitHub", null, AppUrlButton_Clicked);
-            contextMenu.Items.Add("-");
+            var updateVersion = VersionHelpers.GetUpdateVersion();
 
-            foreach (var nodeVersion in NodeFunctions.GetNodeVersions())
+            if (!string.IsNullOrWhiteSpace(updateVersion))
             {
-                var name = nodeVersion.GetDisplayName();
-                var image = nodeVersion.IsCurrent ? iconSelected : iconUnSelected;
+                _contextMenu.Items.Add(
+                    $"New version available ({updateVersion})",
+                    _iconAlert,
+                    (sender, e) => OpenUrl(Constants.LatestReleaseUrl)
+                );
 
-                contextMenu.Items.Add(new ToolStripMenuItem(name, image, VersionButton_Clicked)
-                {
-                    Tag = nodeVersion.Version,
-                });
+                _trayIcon.Icon = _iconAppAlert;
+            }
+            else
+            {
+                _trayIcon.Icon = _iconApp;
             }
 
-            contextMenu.Items.Add("-");
-            contextMenu.Items.Add("Refresh installed versions", null, Refresh);
+            _contextMenu.Items.Add("View on GitHub", _iconGitHub, (sender, e) => OpenUrl(Constants.AppUrl));
+            _contextMenu.Items.Add("-");
 
-            contextMenu.Items.Add("-");
-            contextMenu.Items.Add("Exit", null, Exit);
+            foreach (var nodeVersion in NodeHelpers.GetAvailableNodeVersions())
+            {
+                var image = nodeVersion.IsActive ? _iconSelected : null;
+
+                _contextMenu.Items.Add(nodeVersion.DisplayName, image, async (sender, e) => await OnNodeVersionSelected(nodeVersion));
+            }
+
+            _contextMenu.Items.Add("-");
+
+            _contextMenu.Items.Add("Install", _iconAdd, async (sender, e) =>
+            {
+                _refreshTimer.Stop();
+
+                try
+                {
+                    var command = @"
+                        $version = Read-Host 'Enter version to install'
+                        & nvm install $version
+                        pause
+                    ";
+
+                    using var process = Process.Start(new ProcessStartInfo
+                    {
+                        FileName = "powershell.exe",
+                        Arguments = $"-Command \"{command}\"",
+                        UseShellExecute = true,
+                        Verb = "runas"
+                    });
+
+                    if (process != null)
+                    {
+                        await process.WaitForExitAsync();
+
+                        if (process.ExitCode == 0)
+                        {
+                            await Update();
+                        }
+                    }
+                    else
+                    {
+                        MessageBox.Show("Could not start PowerShell.");
+                    }
+                }
+                finally
+                {
+                    _refreshTimer.Start();
+                }
+            });
+
+            _contextMenu.Items.Add("-");
+            _contextMenu.Items.Add("Refresh", _iconRefresh, async (sender, e) => await Refresh());
+            _contextMenu.Items.Add("-");
+            _contextMenu.Items.Add("Exit", _iconExit, (sender, e) => Exit());
         }
 
-        private void AppUrlButton_Clicked(object? sender, EventArgs e)
+        private async Task OnNodeVersionSelected(NodeVersionModel version)
         {
-            Process.Start(new ProcessStartInfo(AppURL)
+            _refreshTimer.Stop();
+
+            try
+            {
+                var output = await NodeHelpers.SetNodeVersionAsync(version.Version);
+
+                await NodeHelpers.UpdateAsync();
+
+                BuildMenu();
+
+                _trayIcon.ShowBalloonTip(
+                    Constants.NotificationDuration,
+                    "Node version changed",
+                    output,
+                    ToolTipIcon.Info
+                );
+            }
+            finally
+            {
+                _refreshTimer.Start();
+            }
+        }
+
+        private async Task Refresh()
+        {
+            _refreshTimer.Stop();
+
+            try
+            {
+                var update = await NodeHelpers.UpdateAsync();
+                var activeNodeVersion = update.AvailableNodeVersions.FirstOrDefault(x => x.IsActive);
+
+                BuildMenu();
+
+                _trayIcon.ShowBalloonTip(
+                    Constants.NotificationDuration,
+                    "Refreshed successfully",
+                    $"Active node version is {activeNodeVersion?.Version ?? "none"}",
+                    ToolTipIcon.Info
+                );
+            }
+            finally
+            {
+                _refreshTimer.Start();
+            }
+        }
+
+        private async Task Update()
+        {
+            _refreshTimer.Stop();
+
+            try
+            {
+                var update = await NodeHelpers.UpdateAsync();
+                var summary = update.GetSummary();
+
+                if (summary.Count != 0)
+                {
+                    BuildMenu();
+
+                    _trayIcon.ShowBalloonTip(
+                        Constants.NotificationDuration,
+                        "NVM was updated",
+                        string.Join(Environment.NewLine, summary),
+                        ToolTipIcon.Info
+                    );
+                }
+            }
+            finally
+            {
+                _refreshTimer.Start();
+            }
+        }
+
+        private void Exit()
+        {
+            _trayIcon.Visible = false;
+            _trayIcon.Dispose();
+
+            Application.Exit();
+        }
+
+        private static void OpenUrl(string url)
+        {
+            Process.Start(new ProcessStartInfo(url)
             {
                 UseShellExecute = true,
             });
-        }
-
-        private void VersionButton_Clicked(object? sender, EventArgs e)
-        {
-            if (sender is null || sender is not ToolStripMenuItem)
-            {
-                throw new Exception();
-            }
-
-            var output = NodeFunctions.SetNodeVersion((string)((ToolStripMenuItem)sender).Tag);
-
-            NodeFunctions.RefreshNodeVersions();
-
-            BuildMenu();
-
-            trayIcon.ShowBalloonTip(3000, "Node version changed", output, ToolTipIcon.Info);
-        }
-
-        private void Refresh(object? sender, EventArgs e)
-        {
-            var versions = NodeFunctions.RefreshNodeVersions();
-
-            BuildMenu();
-
-            trayIcon.ShowBalloonTip(3000, "Node versions refreshed", $"Found versions {string.Join(", ", versions.Select(v => v.Version))}", ToolTipIcon.Info);
-        }
-
-        private void Exit(object? sender, EventArgs e)
-        {
-            trayIcon.Visible = false;
-            trayIcon.Dispose();
-
-            Application.Exit();
         }
     }
 }
